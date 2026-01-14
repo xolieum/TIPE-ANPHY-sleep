@@ -1,0 +1,8 @@
+📄 1 fichiers PSG trouvés
+🧠 1 fichiers Hypnogramme trouvés
+Traitement de : EPCTL01 - fixed.edf
+NOTE: pick_types() is a legacy function. New code should use inst.pick(...).
+✅ DEBUG - Scores reconnus : 952 / 958
+Scores chargés : 958
+/opt/anaconda3/lib/python3.12/site-packages/torch/nn/modules/conv.py:456: UserWarning: Using padding='same' with even kernel lengths and odd dilation may require a zero-padded copy of the input be created (Triggered internally at /Users/runner/work/pytorch/pytorch/pytorch/aten/src/ATen/native/Convolution.cpp:1041.)
+  return F.conv2d(input, weight, bias, self.stride,

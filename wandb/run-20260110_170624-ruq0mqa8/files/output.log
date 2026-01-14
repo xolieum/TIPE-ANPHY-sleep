@@ -1,0 +1,22 @@
+📄 1 fichiers PSG trouvés
+🧠 1 fichiers Hypnogramme trouvés
+Extracting EDF parameters from /Users/ewen/Desktop/dataset/EPCTL01/EPCTL01 - fixed.edf...
+EDF file detected
+Setting channel info structure...
+Creating raw.info structure...
+Reading 0 ... 28737999  =      0.000 ... 28737.999 secs...
+NOTE: pick_types() is a legacy function. New code should use inst.pick(...).
+Erreur lecture scores : could not convert string 'W' to int64 at row 0, column 1.
+Traceback (most recent call last):
+  File "/Users/ewen/Desktop/TIPE-ANPHY-sleep/CNN Large Dropout 0/CNN Large Dropout0.py", line 102, in <module>
+    x_np, y_np = extract_windows(psg_files, hyp_files, WINDOW_SEC)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/ewen/Desktop/TIPE-ANPHY-sleep/CNN Large Dropout 0/CNN Large Dropout0.py", line 76, in extract_windows
+    raw.set_annotations(annotations)
+  File "<decorator-gen-189>", line 12, in set_annotations
+  File "/opt/anaconda3/lib/python3.12/site-packages/mne/io/base.py", line 733, in set_annotations
+    _validate_type(annotations, Annotations, "annotations")
+  File "/opt/anaconda3/lib/python3.12/site-packages/mne/utils/check.py", line 641, in _validate_type
+    raise TypeError(
+TypeError: annotations must be an instance of Annotations, got <class 'list'> instead.
+[0m

@@ -1,0 +1,17 @@
+📄 1 fichiers PSG trouvés
+🧠 1 fichiers Hypnogramme trouvés
+Extracting EDF parameters from /Users/ewen/Desktop/dataset/EPCTL01/EPCTL01 - fixed.edf...
+EDF file detected
+Setting channel info structure...
+Creating raw.info structure...
+Reading 0 ... 28737999  =      0.000 ... 28737.999 secs...
+NOTE: pick_types() is a legacy function. New code should use inst.pick(...).
+Traceback (most recent call last):
+  File "/Users/ewen/Desktop/TIPE-ANPHY-sleep/CNN Large Dropout 0/CNN Large Dropout0.py", line 103, in <module>
+    x_np, y_np = extract_windows(psg_files, hyp_files, WINDOW_SEC)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/ewen/Desktop/TIPE-ANPHY-sleep/CNN Large Dropout 0/CNN Large Dropout0.py", line 72, in extract_windows
+    segment = raw.get_data(start=start, stop=end)
+                                 ^^^^^
+UnboundLocalError: cannot access local variable 'start' where it is not associated with a value
+[0m

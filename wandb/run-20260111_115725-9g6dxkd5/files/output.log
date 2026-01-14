@@ -1,0 +1,15 @@
+📄 1 fichiers PSG trouvés
+🧠 1 fichiers Hypnogramme trouvés
+Traitement de : EPCTL01 - fixed.edf
+NOTE: pick_types() is a legacy function. New code should use inst.pick(...).
+DEBUG - 5 premières lignes du fichier : ['W\t0\t30\n', 'W\t30\t30\n', 'N1\t60\t30\n', 'N1\t90\t30\n', 'N1\t120\t30\n']
+DEBUG - Scores reconnus : 0 / Total : 958
+Scores chargés : 958
+Traceback (most recent call last):
+  File "/Users/ewen/Desktop/TIPE-ANPHY-sleep/CNN Large Dropout 0/CNN Large Dropout0.py", line 122, in <module>
+    x_np, y_np = extract_windows(psg_files, hyp_files, WINDOW_SEC)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/ewen/Desktop/TIPE-ANPHY-sleep/CNN Large Dropout 0/CNN Large Dropout0.py", line 110, in extract_windows
+    raise ValueError("Aucune donnée extraite. Vérifie ton mapping (W, N1, N2...)")
+ValueError: Aucune donnée extraite. Vérifie ton mapping (W, N1, N2...)
+[0m

@@ -1,0 +1,12 @@
+📄 0 fichiers PSG trouvés
+🧠 0 fichiers Hypnogramme trouvés
+Traceback (most recent call last):
+  File "/Users/ewen/Desktop/TIPE-ANPHY-sleep/CNN Large Dropout 0/CNN Large Dropout0.py", line 105, in <module>
+    x_np, y_np = extract_windows_anphy(psg_files, hyp_files, WINDOW_SEC)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/ewen/Desktop/TIPE-ANPHY-sleep/CNN Large Dropout 0/CNN Large Dropout0.py", line 93, in extract_windows_anphy
+    x_np = np.stack(x_all)
+           ^^^^^^^^^^^^^^^
+  File "/opt/anaconda3/lib/python3.12/site-packages/numpy/core/shape_base.py", line 445, in stack
+    raise ValueError('need at least one array to stack')
+ValueError: need at least one array to stack

@@ -1,0 +1,12 @@
+NOTE: pick_types() is a legacy function. New code should use inst.pick(...).
+NOTE: pick_channels() is a legacy function. New code should use inst.pick(...).
+Erreur lecture TXT : could not convert string 'W' to float64 at row 0, column 1.
+Traceback (most recent call last):
+  File "/Users/ewen/Desktop/TIPE-ANPHY-sleep/CNN Large Dropout 0/CNN Large Dropout0.py", line 116, in <module>
+    dataset = EEGSleepDataset(x_np, y_np)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/ewen/Desktop/TIPE-ANPHY-sleep/CNN Large Dropout 0/CNN Large Dropout0.py", line 109, in __init__
+    self.x = torch.tensor(x, dtype=torch.float32)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: must be real number, not NoneType
+[0m

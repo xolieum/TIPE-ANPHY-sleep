@@ -1,0 +1,24 @@
+{
+  "os":  "macOS-26.0-x86_64-i386-64bit",
+  "python":  "CPython 3.12.4",
+  "startedAt":  "2026-01-10T15:32:01.378598Z",
+  "program":  "/Users/ewen/Desktop/TIPE-ANPHY-sleep/CNN Large Dropout 0/CNN Large Dropout0.py",
+  "codePath":  "CNN Large Dropout 0/CNN Large Dropout0.py",
+  "codePathLocal":  "CNN Large Dropout 0/CNN Large Dropout0.py",
+  "email":  "ewen.mahe1@gmail.com",
+  "root":  "/Users/ewen/Desktop/TIPE-ANPHY-sleep",
+  "host":  "macbookpro.home",
+  "executable":  "/opt/anaconda3/bin/python",
+  "cpu_count":  8,
+  "cpu_count_logical":  16,
+  "disk":  {
+    "/":  {
+      "total":  "1000240963584",
+      "used":  "219948736512"
+    }
+  },
+  "memory":  {
+    "total":  "17179869184"
+  },
+  "writerId":  "qx3y4mfv6vd6sska0srs06f3b56him04"
+}

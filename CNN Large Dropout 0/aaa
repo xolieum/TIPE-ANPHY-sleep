@@ -1,0 +1,10 @@
+import mne
+
+# Chemin vers votre fichier
+file_path = "/Users/ewen/Desktop/dataset/EPCTL01/EPCTL01 - fixed.edf"
+
+# Charger le fichier (preload=True charge les données en RAM, sinon elles restent sur disque)
+raw = mne.io.read_raw_edf(file_path, preload=True)
+
+# Afficher les informations générales (fréquence, canaux, durée)
+print(raw.info)

@@ -1,0 +1,25 @@
+📄 1 fichiers PSG trouvés
+🧠 1 fichiers Hypnogramme trouvés
+Extracting EDF parameters from /Users/ewen/Desktop/dataset/EPCTL01/EPCTL01 - fixed.edf...
+EDF file detected
+Setting channel info structure...
+Creating raw.info structure...
+Reading 0 ... 28737999  =      0.000 ... 28737.999 secs...
+NOTE: pick_channels() is a legacy function. New code should use inst.pick(...).
+Traceback (most recent call last):
+  File "/Users/ewen/Desktop/TIPE-ANPHY-sleep/CNN Large Dropout 0/CNN Large Dropout0.py", line 86, in <module>
+    x_np, y_np = extract_windows(psg_files, hyp_files, WINDOW_SEC)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/ewen/Desktop/TIPE-ANPHY-sleep/CNN Large Dropout 0/CNN Large Dropout0.py", line 55, in extract_windows
+    raw.pick_channels(['EEG Fpz-Cz'])
+  File "<decorator-gen-129>", line 12, in pick_channels
+  File "<decorator-gen-128>", line 5, in pick_channels
+  File "/opt/anaconda3/lib/python3.12/site-packages/mne/channels/channels.py", line 475, in pick_channels
+    picks = pick_channels(self.info["ch_names"], ch_names, ordered=ordered)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<decorator-gen-3>", line 12, in pick_channels
+  File "/opt/anaconda3/lib/python3.12/site-packages/mne/_fiff/pick.py", line 306, in pick_channels
+    raise ValueError(
+ValueError: Missing channels from ch_names required by include:
+['EEG Fpz-Cz']
+[0m

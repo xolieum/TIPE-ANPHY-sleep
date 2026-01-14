@@ -1,0 +1,24 @@
+{
+  "os":  "macOS-26.0-x86_64-i386-64bit",
+  "python":  "CPython 3.12.4",
+  "startedAt":  "2026-01-10T14:39:20.493629Z",
+  "program":  "/Users/ewen/Desktop/TIPE-ANPHY-sleep/CNN.py",
+  "codePath":  "CNN.py",
+  "codePathLocal":  "CNN.py",
+  "email":  "ewen.mahe1@gmail.com",
+  "root":  "/Users/ewen/Desktop/TIPE-ANPHY-sleep",
+  "host":  "macbookpro.home",
+  "executable":  "/opt/anaconda3/bin/python",
+  "cpu_count":  8,
+  "cpu_count_logical":  16,
+  "disk":  {
+    "/":  {
+      "total":  "1000240963584",
+      "used":  "217900503040"
+    }
+  },
+  "memory":  {
+    "total":  "17179869184"
+  },
+  "writerId":  "a7shcludcts1a1chxya6s5mm0lpizqh6"
+}

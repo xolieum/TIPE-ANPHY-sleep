@@ -1,0 +1,7 @@
+{"time":"2026-01-14T13:30:59.064555+01:00","level":"INFO","msg":"stream: starting","core version":"0.21.4"}
+{"time":"2026-01-14T13:30:59.08745+01:00","level":"ERROR","msg":"monitor: failed to initialize GPU resource: monitor: could not start GPU binary: fork/exec /opt/anaconda3/lib/python3.12/site-packages/wandb/bin/gpu_stats: bad CPU type in executable"}
+{"time":"2026-01-14T13:30:59.331817+01:00","level":"INFO","msg":"stream: created new stream","id":"fydjv3vt"}
+{"time":"2026-01-14T13:30:59.332097+01:00","level":"INFO","msg":"stream: started","id":"fydjv3vt"}
+{"time":"2026-01-14T13:30:59.332179+01:00","level":"INFO","msg":"writer: started","stream_id":"fydjv3vt"}
+{"time":"2026-01-14T13:30:59.332343+01:00","level":"INFO","msg":"handler: started","stream_id":"fydjv3vt"}
+{"time":"2026-01-14T13:30:59.332511+01:00","level":"INFO","msg":"sender: started","stream_id":"fydjv3vt"}

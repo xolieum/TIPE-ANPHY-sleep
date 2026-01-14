@@ -1,0 +1,25 @@
+📄 133 fichiers PSG trouvés
+🧠 133 fichiers Hypnogramme trouvés
+Extracting EDF parameters from /Users/ewen/Desktop/TIPE/BDD/Training-signals/SC4001E0-PSG.edf...
+EDF file detected
+/Users/ewen/Desktop/TIPE---Signal-classification-main/TIPE---Signal-classification/Model CCN/CNN V3/CNN Trainer - V3.py:54: RuntimeWarning: Number of records from the header does not match the file size (perhaps the recording was not stopped before exiting). Inferring from the file size.
+  raw = mne.io.read_raw_edf(psg_path, preload=True)
+Setting channel info structure...
+/Users/ewen/Desktop/TIPE---Signal-classification-main/TIPE---Signal-classification/Model CCN/CNN V3/CNN Trainer - V3.py:54: RuntimeWarning: Channels contain different highpass filters. Highest filter setting will be stored.
+  raw = mne.io.read_raw_edf(psg_path, preload=True)
+/Users/ewen/Desktop/TIPE---Signal-classification-main/TIPE---Signal-classification/Model CCN/CNN V3/CNN Trainer - V3.py:54: RuntimeWarning: Channels contain different lowpass filters. Lowest filter setting will be stored.
+  raw = mne.io.read_raw_edf(psg_path, preload=True)
+/Users/ewen/Desktop/TIPE---Signal-classification-main/TIPE---Signal-classification/Model CCN/CNN V3/CNN Trainer - V3.py:54: RuntimeWarning: Highpass cutoff frequency 16.0 is greater than lowpass cutoff frequency 0.7, setting values to 0 and Nyquist.
+  raw = mne.io.read_raw_edf(psg_path, preload=True)
+Creating raw.info structure...
+Reading 0 ... 2456999  =      0.000 ... 24569.990 secs...
+NOTE: pick_types() is a legacy function. New code should use inst.pick(...).
+Traceback (most recent call last):
+  File "/Users/ewen/Desktop/TIPE---Signal-classification-main/TIPE---Signal-classification/Model CCN/CNN V3/CNN Trainer - V3.py", line 95, in <module>
+    x_np, y_np = extract_windows(psg_files, hyp_files, WINDOW_SEC)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/ewen/Desktop/TIPE---Signal-classification-main/TIPE---Signal-classification/Model CCN/CNN V3/CNN Trainer - V3.py", line 64, in extract_windows
+    segment = raw.get_data(start=start, stop=end)
+                                 ^^^^^
+UnboundLocalError: cannot access local variable 'start' where it is not associated with a value
+[0m

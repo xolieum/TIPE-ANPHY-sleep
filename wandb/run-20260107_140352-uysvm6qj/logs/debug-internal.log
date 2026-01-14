@@ -1,0 +1,12 @@
+{"time":"2026-01-07T14:03:52.881025+01:00","level":"INFO","msg":"stream: starting","core version":"0.21.4"}
+{"time":"2026-01-07T14:03:52.894163+01:00","level":"ERROR","msg":"monitor: failed to initialize GPU resource: monitor: could not start GPU binary: fork/exec /opt/anaconda3/lib/python3.12/site-packages/wandb/bin/gpu_stats: bad CPU type in executable"}
+{"time":"2026-01-07T14:03:53.065011+01:00","level":"INFO","msg":"stream: created new stream","id":"uysvm6qj"}
+{"time":"2026-01-07T14:03:53.065083+01:00","level":"INFO","msg":"stream: started","id":"uysvm6qj"}
+{"time":"2026-01-07T14:03:53.065113+01:00","level":"INFO","msg":"writer: started","stream_id":"uysvm6qj"}
+{"time":"2026-01-07T14:03:53.065186+01:00","level":"INFO","msg":"handler: started","stream_id":"uysvm6qj"}
+{"time":"2026-01-07T14:03:53.065211+01:00","level":"INFO","msg":"sender: started","stream_id":"uysvm6qj"}
+{"time":"2026-01-07T14:03:53.776328+01:00","level":"INFO","msg":"stream: closing","id":"uysvm6qj"}
+{"time":"2026-01-07T14:03:54.834964+01:00","level":"INFO","msg":"fileTransfer: Close: file transfer manager closed"}
+{"time":"2026-01-07T14:03:55.076892+01:00","level":"INFO","msg":"handler: closed","stream_id":"uysvm6qj"}
+{"time":"2026-01-07T14:03:55.07728+01:00","level":"INFO","msg":"sender: closed","stream_id":"uysvm6qj"}
+{"time":"2026-01-07T14:03:55.07733+01:00","level":"INFO","msg":"stream: closed","id":"uysvm6qj"}

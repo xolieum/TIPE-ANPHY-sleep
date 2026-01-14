@@ -1,0 +1,12 @@
+📄 1 fichiers PSG trouvés
+🧠 1 fichiers Hypnogramme trouvés
+Traitement de : EPCTL01 - fixed.edf
+NOTE: pick_types() is a legacy function. New code should use inst.pick(...).
+✅ DEBUG - Scores reconnus : 952 / 958
+Scores chargés : 958
+Traceback (most recent call last):
+  File "/Users/ewen/Desktop/TIPE-ANPHY-sleep/CNN Large Dropout 0/CNN Large Dropout0.py", line 177, in <module>
+    model = SleepStageCNN64(input_channels=1, input_length=x_np.shape[2], num_classes=NUM_CLASSES)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: SleepStageCNN64.__init__() got an unexpected keyword argument 'input_channels'
+[0m

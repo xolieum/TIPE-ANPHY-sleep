@@ -1,0 +1,9 @@
+📄 0 fichiers PSG trouvés
+🧠 0 fichiers Hypnogramme trouvés
+Traceback (most recent call last):
+  File "/Users/ewen/Desktop/TIPE-ANPHY-sleep/CNN Large Dropout 0/CNN Large Dropout0.py", line 111, in <module>
+    x_np, y_np = extract_windows_anphy(psg_files, hyp_files, WINDOW_SEC)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/ewen/Desktop/TIPE-ANPHY-sleep/CNN Large Dropout 0/CNN Large Dropout0.py", line 101, in extract_windows_anphy
+    raise ValueError("Aucune donnée n'a pu être extraite. Vérifiez les fichiers.")
+ValueError: Aucune donnée n'a pu être extraite. Vérifiez les fichiers.

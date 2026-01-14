@@ -1,0 +1,10 @@
+Traceback (most recent call last):
+  File "/Users/ewen/Desktop/TIPE-ANPHY-sleep/CNN Large Dropout 0/CNN Large Dropout0.py", line 87, in <module>
+    x_np, y_np = extract_windows(DATA_DIR, DATA_DIR, WINDOW_SEC)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/ewen/Desktop/TIPE-ANPHY-sleep/CNN Large Dropout 0/CNN Large Dropout0.py", line 54, in extract_windows
+    raw = mne.io.read_raw_edf(psg_path, preload=True)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/anaconda3/lib/python3.12/site-packages/mne/io/edf/edf.py", line 1698, in read_raw_edf
+    raise NotImplementedError(f"Only EDF files are supported, got {ext}.")
+NotImplementedError: Only EDF files are supported, got .
