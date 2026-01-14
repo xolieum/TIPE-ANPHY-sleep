@@ -100,10 +100,10 @@ class SleepStageCNN64(nn.Module):
         self.fc = nn.Sequential(
             nn.Linear(self.flatten_dim, 256),
             nn.ReLU(),
-            nn.Dropout(p=20),   # Augmenté à 0.5 car 64 canaux sur-apprennent vite
+            nn.Dropout(p=0.2),   # Augmenté à 0.5 car 64 canaux sur-apprennent vite
             nn.Linear(256, 128),
             nn.ReLU(),
-            nn.Dropout(p=20),
+            nn.Dropout(p=0.2),
             nn.Linear(128, 64),
             nn.ReLU(),
             nn.Linear(64, num_classes)
