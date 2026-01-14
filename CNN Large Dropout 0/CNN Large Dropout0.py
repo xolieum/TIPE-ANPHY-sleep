@@ -69,30 +69,60 @@ class MemmapSleepDataset(Dataset):
         subj_idx, local_idx = self.lookup[idx]
         x = np.array(self.x_maps[subj_idx][local_idx])
         y = self.y_maps[subj_idx][local_idx]
-        return torch.from_numpy(x).float().unsqueeze(0), torch.tensor(y).long()
+        # REMOVED .unsqueeze(0) - Conv1d needs (Channels, Time)
+        return torch.from_numpy(x).float(), torch.tensor(y).long()
 
 # === Architecture CNN ===
 class SleepStageCNN64(nn.Module):
-    def __init__(self, num_channels, input_length, num_classes=5):
+    def __init__(self, input_channels=64, input_length=3000, num_classes=5):
         super().__init__()
-        self.temporal_conv = nn.Conv2d(1, 16, kernel_size=(1, 64), padding='same')
-        self.spatial_conv = nn.Conv2d(16, 32, kernel_size=(num_channels, 1))
-        self.pool = nn.MaxPool2d(kernel_size=(1, 4))
-        self.dropout = nn.Dropout(0.5)
+        
+        # Layer 1: Input 64 channels
+        self.conv1 = nn.Conv1d(input_channels, 32, kernel_size=3, padding=1)
+        self.bn1 = nn.BatchNorm1d(32)
+        self.pool1 = nn.MaxPool1d(2)
+        
+        # Layer 2
+        self.conv2 = nn.Conv1d(32, 64, kernel_size=3, padding=1)
+        self.bn2 = nn.BatchNorm1d(64)
+        self.pool2 = nn.MaxPool1d(2)
+        
+        # Layer 3 & 4
+        self.conv3 = nn.Conv1d(64, 128, kernel_size=3, padding=1)
+        self.conv4 = nn.Conv1d(128, 128, kernel_size=3, padding=1)
+        self.bn4 = nn.BatchNorm1d(128)
+        self.pool3 = nn.MaxPool1d(2)
 
+        # Automatic dimension calculation
         with torch.no_grad():
-            dummy = torch.zeros(1, 1, num_channels, input_length)
-            x = self.pool(F.relu(self.spatial_conv(F.relu(self.temporal_conv(dummy)))))
-            self.flat_dim = x.numel()
+            dummy = torch.zeros(1, input_channels, input_length)
+            # Simulating the forward pass
+            x = self.pool1(F.relu(self.bn1(self.conv1(dummy))))
+            x = self.pool2(F.relu(self.bn2(self.conv2(x))))
+            x = self.pool3(F.relu(self.bn4(self.conv4(F.relu(self.conv3(x))))))
+            self.flatten_dim = x.numel()
 
-        self.classifier = nn.Linear(self.flat_dim, num_classes)
+        self.fc = nn.Sequential(
+            nn.Linear(self.flatten_dim, 256),
+            nn.ReLU(),
+            nn.Dropout(0), # Crucial for 64-channel EEG
+            nn.Linear(256, 128),
+            nn.ReLU(),
+            nn.Dropout(0),
+            nn.Linear(128, 64),
+            nn.ReLU(),
+            nn.Linear(64, num_classes)
+        )
 
     def forward(self, x):
-        x = F.relu(self.temporal_conv(x))
-        x = F.relu(self.spatial_conv(x))
-        x = self.pool(x)
+        # x shape: (Batch, 64, Time)
+        x = self.pool1(F.relu(self.bn1(self.conv1(x))))
+        x = self.pool2(F.relu(self.bn2(self.conv2(x))))
+        x = F.relu(self.conv3(x))
+        x = self.pool3(F.relu(self.bn4(self.conv4(x))))
+        
         x = x.view(x.size(0), -1)
-        return self.classifier(self.dropout(x))
+        return self.fc(x)
 
 # === Setup ===
 train_ds = MemmapSleepDataset(PROCESSED_DATA_DIR, TRAIN_IDS)
@@ -104,7 +134,7 @@ val_loader   = DataLoader(val_ds,   batch_size=BATCH_SIZE, shuffle=False, num_wo
 test_loader  = DataLoader(test_ds,  batch_size=BATCH_SIZE, shuffle=False, num_workers=4, pin_memory=True)
 
 sample_x, _ = train_ds[0]
-model = SleepStageCNN64(num_channels=sample_x.shape[1], input_length=sample_x.shape[2], num_classes=NUM_CLASSES)
+model = SleepStageCNN64(input_channels=sample_x.shape[0], input_length=sample_x.shape[1], num_classes=NUM_CLASSES)
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 model.to(device)
 
