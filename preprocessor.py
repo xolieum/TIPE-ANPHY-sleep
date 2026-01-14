@@ -6,14 +6,6 @@ from tqdm import tqdm
 # === Configuration ===
 # List all your data directories here
 INPUT_FOLDERS = [
-    "../ANPHY/EPCTL02/",
-    "../ANPHY/EPCTL03/",
-    "../ANPHY/EPCTL04/",
-    "../ANPHY/EPCTL05/",
-    "../ANPHY/EPCTL06/",
-    "../ANPHY/EPCTL07/",
-    "../ANPHY/EPCTL08/",
-    "../ANPHY/EPCTL09/",
     "../ANPHY/EPCTL10/",
     "../ANPHY/EPCTL11/",
     "../ANPHY/EPCTL12/",
