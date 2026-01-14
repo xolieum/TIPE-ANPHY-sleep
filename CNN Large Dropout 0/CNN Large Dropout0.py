@@ -1,20 +1,25 @@
 import os
 import numpy as np
-import mne
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from torch.utils.data import Dataset, DataLoader, random_split
+from torch.utils.data import Dataset, DataLoader
 import matplotlib.pyplot as plt
 import wandb
 
 # === Paramètres ===
-DATA_DIR = "/Users/ewen/Desktop/dataset/EPCTL01"
-WINDOW_SEC = 30
-BATCH_SIZE = 128
+PROCESSED_DATA_DIR = "./processed_data_30s"
+BATCH_SIZE = 128 # Increased for better stability, adjust if needed
 NUM_CLASSES = 5
 EPOCHS = 100
 LR = 1e-5
+
+# === Split Configuration ===
+# Define exactly which subjects go into which set
+# Subjects 2 through 10 for training
+TRAIN_IDS = [f"EPCTL{str(i).zfill(2)}" for i in range(2, 11)] 
+VAL_IDS   = ["EPCTL11"]
+TEST_IDS  = ["EPCTL12"]
 
 # === Initialisation wandb ===
 wandb.init(
@@ -23,210 +28,147 @@ wandb.init(
         "epochs": EPOCHS,
         "batch_size": BATCH_SIZE,
         "learning_rate": LR,
-        "window_sec": WINDOW_SEC,
         "num_classes": NUM_CLASSES,
+        "train_subjects": TRAIN_IDS,
+        "val_subjects": VAL_IDS,
+        "test_subjects": TEST_IDS
     }
 )
-config = wandb.config
 
-# === Liste des fichiers EDF ===
-def list_sleep_edf_files(data_dir):
-    psg_files = sorted([os.path.join(data_dir, f) for f in os.listdir(data_dir) if f.endswith(".edf")])
-    hyp_files = sorted([os.path.join(data_dir, f) for f in os.listdir(data_dir) if f.endswith(".txt")])
-    print(f"📄 {len(psg_files)} fichiers PSG trouvés")
-    print(f"🧠 {len(hyp_files)} fichiers Hypnogramme trouvés")
-    return psg_files, hyp_files
+# === Dataset PyTorch "Lazy Loading" ===
+class MemmapSleepDataset(Dataset):
+    def __init__(self, data_dir, subject_list):
+        self.x_maps = []
+        self.y_maps = []
+        self.lookup = [] # List of (map_index, local_index)
 
-# === Mapping des labels ===
-score_mapping = {
-    'W': 0, 'Stage W': 0,
-    'N1': 1, 'Stage 1': 1,
-    'N2': 2, 'Stage 2': 2,
-    'N3': 3, 'Stage 3': 3, 'N4': 3, # On fusionne N3 et N4
-    'R': 4, 'Stage R': 4, 'REM': 4
-}
-
-def load_txt_hypnogram(hyp_path):
-    scores_convertis = []
-    # Dictionnaire de correspondance exact pour tes labels
-    mapping = {
-        'W': 0, 
-        'N1': 1, 
-        'N2': 2, 
-        'N3': 3, 'N4': 3, 
-        'R': 4, 'REM': 4
-    }
-    
-    with open(hyp_path, 'r') as f:
-        for line in f:
-            # .split() gère automatiquement les tabulations (\t) et les espaces
-            parts = line.strip().split()
-            if not parts:
-                continue
-            
-            # Le stade est le PREMIER élément (indice 0)
-            stade_texte = parts[0] 
-            
-            # On convertit le texte en chiffre
-            score = mapping.get(stade_texte, -1)
-            scores_convertis.append(score)
-            
-    valid_count = sum(1 for s in scores_convertis if s != -1)
-    print(f"✅ DEBUG - Scores reconnus : {valid_count} / {len(scores_convertis)}")
-    
-    return np.array(scores_convertis)
-    
-# === Extraction des fenêtres ===
-def extract_windows(psg_files, hyp_files, window_sec):
-    x_all, y_all = [], []
-    
-    for psg_path, hyp_path in zip(psg_files, hyp_files):
-        print(f"Traitement de : {os.path.basename(psg_path)}")
-        raw = mne.io.read_raw_edf(psg_path, preload=True, verbose=False)
-        raw.pick_types(eeg=True)
+        print(f"⌛ Loading subjects for set: {subject_list}")
         
-        sfreq = int(raw.info['sfreq'])
-        samples_per_window = window_sec * sfreq
-        
-        # On utilise notre nouvelle fonction de lecture
-        scores = load_txt_hypnogram(hyp_path)
-        print(f"Scores chargés : {len(scores)}")
-
-        for i, label in enumerate(scores):
-            # On ignore les scores invalides (-1)
-            if label == -1:
+        for idx, sid in enumerate(subject_list):
+            x_path = os.path.join(data_dir, f"{sid}_x.npy")
+            y_path = os.path.join(data_dir, f"{sid}_y.npy")
+            
+            if not os.path.exists(x_path):
+                print(f"⚠️ Warning: Subject {sid} files not found. Skipping.")
                 continue
-            
-            start = int(i * samples_per_window)
-            stop = start + samples_per_window
-            
-            if stop <= raw.n_times:
-                segment = raw.get_data(start=start, stop=stop)
                 
-                # Normalisation Z-score
-                segment = (segment - np.mean(segment)) / (np.std(segment) + 1e-8)
+            # Load with mmap_mode='r' (No RAM usage)
+            x_mmap = np.load(x_path, mmap_mode='r')
+            y_mmap = np.load(y_path, mmap_mode='r')
+            
+            self.x_maps.append(x_mmap)
+            self.y_maps.append(y_mmap)
+            
+            # Map global index to (this subject's index in list, local window index)
+            for local_idx in range(len(y_mmap)):
+                self.lookup.append((len(self.x_maps) - 1, local_idx))
                 
-                x_all.append(segment)
-                y_all.append(label)
+        print(f"✅ Set initialized: {len(self.x_maps)} subjects, {len(self.lookup)} windows.")
 
-    if len(x_all) == 0:
-        raise ValueError("Aucune donnée extraite. Vérifie ton mapping (W, N1, N2...)")
-
-    x_np = np.array(x_all)
-    x_np = x_np[:, np.newaxis, :, :] # (N, 1, 64, Longueur)
-    y_np = np.array(y_all)
-    return x_np, y_np
-
-psg_files, hyp_files = list_sleep_edf_files(DATA_DIR)
-if os.path.exists("x_data.npy") and os.path.exists("y_data.npy"):
-    x_np = np.load("x_data.npy", mmap_mode='r')
-    y_np = np.load("y_data.npy", mmap_mode='r')
-else :
-    x_np, y_np = extract_windows(psg_files, hyp_files, WINDOW_SEC)
-
-# === Dataset PyTorch ===
-class EEGSleepDataset(Dataset):
-    def __init__(self, x, y):
-        self.x = torch.tensor(x, dtype=torch.float32)
-        self.y = torch.tensor(y, dtype=torch.long)
     def __len__(self):
-        return len(self.x)
+        return len(self.lookup)
+
     def __getitem__(self, idx):
-        return self.x[idx], self.y[idx]
+        subj_idx, local_idx = self.lookup[idx]
+        x = np.array(self.x_maps[subj_idx][local_idx])
+        y = self.y_maps[subj_idx][local_idx]
+        return torch.from_numpy(x).float().unsqueeze(0), torch.tensor(y).long()
 
-dataset = EEGSleepDataset(x_np, y_np)
-train_size = int(0.8 * len(dataset))
-val_size = len(dataset) - train_size
-train_dataset, val_dataset = random_split(dataset, [train_size, val_size])
-train_loader = DataLoader(train_dataset, batch_size=BATCH_SIZE, shuffle=True)
-val_loader = DataLoader(val_dataset, batch_size=BATCH_SIZE, shuffle=False)
-
-
+# === Architecture CNN ===
 class SleepStageCNN64(nn.Module):
-    def __init__(self, num_channels=64, input_length=3000, num_classes=5):
+    def __init__(self, num_channels, input_length, num_classes=5):
         super().__init__()
-        
-        # 1. Filtre Temporel : Apprend les fréquences (Delta, Alpha...) sur chaque canal
         self.temporal_conv = nn.Conv2d(1, 16, kernel_size=(1, 64), padding='same')
-        
-        # 2. Filtre Spatial : Combine les 64 canaux entre eux
         self.spatial_conv = nn.Conv2d(16, 32, kernel_size=(num_channels, 1))
-        
         self.pool = nn.MaxPool2d(kernel_size=(1, 4))
         self.dropout = nn.Dropout(0.5)
 
-        # Calcul automatique pour la couche linéaire
         with torch.no_grad():
             dummy = torch.zeros(1, 1, num_channels, input_length)
-            x = self.temporal_conv(dummy)
-            x = self.spatial_conv(x)
-            x = self.pool(x)
+            x = self.pool(F.relu(self.spatial_conv(F.relu(self.temporal_conv(dummy)))))
             self.flat_dim = x.numel()
 
         self.classifier = nn.Linear(self.flat_dim, num_classes)
 
     def forward(self, x):
-        # x shape attendu: (Batch, 1, 64, Longueur)
         x = F.relu(self.temporal_conv(x))
         x = F.relu(self.spatial_conv(x))
         x = self.pool(x)
         x = x.view(x.size(0), -1)
         return self.classifier(self.dropout(x))
-    
 
-model = SleepStageCNN64(num_channels=x_np.shape[2], input_length=x_np.shape[3], num_classes=NUM_CLASSES)
+# === Main Pipeline ===
+
+# 1. Setup Subject-wise Datasets
+train_ds = MemmapSleepDataset(PROCESSED_DATA_DIR, TRAIN_IDS)
+val_ds   = MemmapSleepDataset(PROCESSED_DATA_DIR, VAL_IDS)
+test_ds  = MemmapSleepDataset(PROCESSED_DATA_DIR, TEST_IDS)
+
+# 2. Setup DataLoaders
+# Use shuffle=True ONLY for train_loader
+train_loader = DataLoader(train_ds, batch_size=BATCH_SIZE, shuffle=True, num_workers=4, pin_memory=True)
+val_loader   = DataLoader(val_ds,   batch_size=BATCH_SIZE, shuffle=False, num_workers=4, pin_memory=True)
+test_loader  = DataLoader(test_ds,  batch_size=BATCH_SIZE, shuffle=False, num_workers=4, pin_memory=True)
+
+# 3. Setup Model
+# Get dimensions from any dataset sample
+sample_x, _ = train_ds[0]
+model = SleepStageCNN64(num_channels=sample_x.shape[1], 
+                        input_length=sample_x.shape[2], 
+                        num_classes=NUM_CLASSES)
+
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+model.to(device)
+
 criterion = nn.CrossEntropyLoss()
 optimizer = torch.optim.Adam(model.parameters(), lr=LR)
 
-# === Évaluation ===
+# 4. Evaluation Function
 def evaluate(model, loader):
     model.eval()
-    total_loss, total_samples = 0, 0
+    total_loss, correct, total_samples = 0, 0, 0
     with torch.no_grad():
         for x_batch, y_batch in loader:
+            x_batch, y_batch = x_batch.to(device), y_batch.to(device)
             preds = model(x_batch)
             loss = criterion(preds, y_batch)
+            
             total_loss += loss.item() * y_batch.size(0)
+            correct += (preds.argmax(1) == y_batch).sum().item()
             total_samples += y_batch.size(0)
-    return total_loss / total_samples
+            
+    return total_loss / total_samples, correct / total_samples
 
-# === Boucle d'entraînement avec wandb ===
-train_losses, val_losses = [], []
-
+# 5. Training Loop
 for epoch in range(EPOCHS):
     model.train()
     total_loss, total_samples = 0, 0
+    
     for x_batch, y_batch in train_loader:
+        x_batch, y_batch = x_batch.to(device), y_batch.to(device)
+        
         optimizer.zero_grad()
         preds = model(x_batch)
         loss = criterion(preds, y_batch)
         loss.backward()
         optimizer.step()
+        
         total_loss += loss.item() * y_batch.size(0)
         total_samples += y_batch.size(0)
+    
     train_loss = total_loss / total_samples
-    val_loss = evaluate(model, val_loader)
+    val_loss, val_acc = evaluate(model, val_loader)
     
-    train_losses.append(train_loss)
-    val_losses.append(val_loss)
-    
-    # Log dans wandb
     wandb.log({
-        "epoch": epoch + 1,
-        "train_loss": train_loss,
-        "val_loss": val_loss
+        "epoch": epoch + 1, 
+        "train_loss": train_loss, 
+        "val_loss": val_loss,
+        "val_accuracy": val_acc
     })
     
-    print(f"Époque {epoch+1}/{EPOCHS} | Train Loss: {train_loss:.4f} | Val Loss: {val_loss:.4f}")
+    print(f"Epoch {epoch+1}/{EPOCHS} | Train Loss: {train_loss:.4f} | Val Loss: {val_loss:.4f} | Val Acc: {val_acc:.2%}")
 
-# === Courbes locales ===
-plt.figure(figsize=(10,5))
-plt.plot(range(1, EPOCHS+1), train_losses, marker='o', label='Train Loss')
-plt.plot(range(1, EPOCHS+1), val_losses, marker='x', color='red', label='Validation Loss')
-plt.xlabel('Époque')
-plt.ylabel('Loss')
-plt.title('Courbe de perte')
-plt.grid(True)
-plt.legend()
-plt.show()
-
+# 6. Final Test Evaluation
+test_loss, test_acc = evaluate(model, test_loader)
+print(f"\n✨ Final Test (Subject EPCTL12) | Loss: {test_loss:.4f} | Accuracy: {test_acc:.2%}")
+wandb.log({"test_accuracy": test_acc})
