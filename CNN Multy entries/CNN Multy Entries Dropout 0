@@ -1,5 +1,6 @@
 import os
 import numpy as np
+import mne
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -7,6 +8,7 @@ from torch.utils.data import Dataset, DataLoader
 from tqdm import tqdm  # <--- Added
 import matplotlib.pyplot as plt
 import wandb
+from scipy.signal import butter, filtfilt
 
 # === Paramètres ===
 PROCESSED_DATA_DIR = "./processed_data_30s"
@@ -34,107 +36,134 @@ wandb.init(
     }
 )
 
+#Fonction du filtre passe bande
+def bandpass_filter(data, sfreq, l_freq, h_freq):
+    return mne.filter.filter_data(data, sfreq=sfreq, l_freq=l_freq, h_freq=h_freq, verbose=False)
+
+#Définition des différentes bandes de fréquence
+bands = {
+    'Beta'  : (14,30),
+    'Alpha' : (9,13),
+    'Theta' : (4,8),
+    'Delta' : (0,4),
+    'Gamma' : (31,500)
+}
+
+band_names = list(bands.keys())
+
+#Initialisation des bandes de fréquences
+def extract_band_signals(x_np, sfreq, bands):
+    band_signals = []
+    for band, (low, high) in bands.items():
+        filtered = np.array([bandpass_filter(sig, sfreq, low, high) for sig in x_np[:,0,:]])
+        band_signals.append(filtered[:, np.newaxis, :])  # shape: (N, 1, L)
+    return band_signals
+
 # === Dataset PyTorch "Lazy Loading" ===
-class MemmapSleepDataset(Dataset):
-    def __init__(self, data_dir, subject_list):
+class MultiBandMemmapDataset(Dataset):
+    def __init__(self, data_dir, subject_list, bands, sfreq=100):
         self.x_maps = []
         self.y_maps = []
         self.lookup = [] 
+        self.bands = bands
+        self.sfreq = sfreq
+        self.band_names = list(bands.keys())
 
-        print(f"⌛ Loading subjects for set: {subject_list}")
-        
-        for idx, sid in enumerate(subject_list):
+        # Pré-calcul des coefficients de filtrage pour chaque bande
+        self.filter_coeffs = {}
+        for name, (low, high) in bands.items():
+            nyq = 0.5 * sfreq
+            b, a = butter(4, [max(0.01, low/nyq), min(0.99, high/nyq)], btype='band')
+            self.filter_coeffs[name] = (b, a)
+
+        for sid in subject_list:
             x_path = os.path.join(data_dir, f"{sid}_x.npy")
             y_path = os.path.join(data_dir, f"{sid}_y.npy")
             
-            if not os.path.exists(x_path):
-                print(f"⚠️ Warning: Subject {sid} not found. Skipping.")
-                continue
+            if os.path.exists(x_path):
+                x_mmap = np.load(x_path, mmap_mode='r')
+                y_mmap = np.load(y_path, mmap_mode='r')
                 
-            x_mmap = np.load(x_path, mmap_mode='r')
-            y_mmap = np.load(y_path, mmap_mode='r')
-            
-            self.x_maps.append(x_mmap)
-            self.y_maps.append(y_mmap)
-            
-            for local_idx in range(len(y_mmap)):
-                self.lookup.append((len(self.x_maps) - 1, local_idx))
+                self.x_maps.append(x_mmap)
+                self.y_maps.append(y_mmap)
                 
-        print(f"✅ Set initialized: {len(self.x_maps)} subjects, {len(self.lookup)} windows.")
+                curr_subj_idx = len(self.x_maps) - 1
+                for local_idx in range(len(y_mmap)):
+                    self.lookup.append((curr_subj_idx, local_idx))
 
     def __len__(self):
         return len(self.lookup)
 
     def __getitem__(self, idx):
         subj_idx, local_idx = self.lookup[idx]
-        x = np.array(self.x_maps[subj_idx][local_idx])
+        
+        # Charger le signal brut depuis le disque (faible empreinte RAM)
+        raw_x = np.array(self.x_maps[subj_idx][local_idx]) # Shape: (L,) ou (1, L)
+        
+        # Nettoyage de la shape si nécessaire
+        if raw_x.ndim > 1:
+            raw_x = raw_x.squeeze()
+
+        # Dictionnaire pour stocker les versions filtrées
+        x_dict = {}
+        
+        for name in self.band_names:
+            b, a = self.filter_coeffs[name]
+            # Filtrage à la volée
+            filtered = filtfilt(b, a, raw_x)
+            # Ajout de la dimension Channel pour Conv1d -> (1, L)
+            x_dict[name] = torch.from_numpy(filtered.copy()).float().unsqueeze(0)
+            
         y = self.y_maps[subj_idx][local_idx]
-        # REMOVED .unsqueeze(0) - Conv1d needs (Channels, Time)
-        return torch.from_numpy(x).float(), torch.tensor(y).long()
+        return x_dict, torch.tensor(y).long()
 
 # === Architecture CNN ===
-class SleepStageCNN64(nn.Module):
-    def __init__(self, input_channels=64, input_length=3000, num_classes=5):
+class MultiBandCNN64(nn.Module):
+    def __init__(self, input_length=3000, num_classes=NUM_CLASSES, bands=band_names):
         super().__init__()
-        
-        # Layer 1: Input 64 channels
-        self.conv1 = nn.Conv1d(input_channels, 32, kernel_size=3, padding=1)
-        self.bn1 = nn.BatchNorm1d(32)
-        self.pool1 = nn.MaxPool1d(2)
-        
-        # Layer 2
-        self.conv2 = nn.Conv1d(32, 64, kernel_size=3, padding=1)
-        self.bn2 = nn.BatchNorm1d(64)
-        self.pool2 = nn.MaxPool1d(2)
-        
-        # Layer 3 & 4
-        self.conv3 = nn.Conv1d(64, 128, kernel_size=3, padding=1)
-        self.conv4 = nn.Conv1d(128, 128, kernel_size=3, padding=1)
-        self.bn4 = nn.BatchNorm1d(128)
-        self.pool3 = nn.MaxPool1d(2)
-
-        # Automatic dimension calculation
+        self.branches = nn.ModuleDict({
+            band: nn.Sequential(
+                nn.Conv1d(1, 32, 3, padding=1),
+                nn.ReLU(),
+                nn.MaxPool1d(2),
+                nn.Conv1d(32, 64, 3, padding=1),
+                nn.ReLU(),
+                nn.MaxPool1d(2),
+            ) for band in bands
+        })
+        # Calcule la dimension finale
         with torch.no_grad():
-            dummy = torch.zeros(1, input_channels, input_length)
-            # Simulating the forward pass
-            x = self.pool1(F.relu(self.bn1(self.conv1(dummy))))
-            x = self.pool2(F.relu(self.bn2(self.conv2(x))))
-            x = self.pool3(F.relu(self.bn4(self.conv4(F.relu(self.conv3(x))))))
-            self.flatten_dim = x.numel()
-
+            dummy = torch.zeros(1, 1, input_length)
+            out = self.branches[bands[0]](dummy)
+            flatten_dim = out.view(1, -1).shape[1] * len(bands)
         self.fc = nn.Sequential(
-            nn.Linear(self.flatten_dim, 256),
+            nn.Linear(flatten_dim, 256),
             nn.ReLU(),
-            nn.Dropout(0),
             nn.Linear(256, 128),
             nn.ReLU(),
-            nn.Dropout(0),
-            nn.Linear(128, 64),
-            nn.ReLU(),
-            nn.Linear(64, num_classes)
+            nn.Linear(128, num_classes)
         )
 
-    def forward(self, x):
-        # x shape: (Batch, 64, Time)
-        x = self.pool1(F.relu(self.bn1(self.conv1(x))))
-        x = self.pool2(F.relu(self.bn2(self.conv2(x))))
-        x = F.relu(self.conv3(x))
-        x = self.pool3(F.relu(self.bn4(self.conv4(x))))
-        
-        x = x.view(x.size(0), -1)
-        return self.fc(x)
+    def forward(self, x_dict):
+        features = []
+        for band, x in x_dict.items():
+            out = self.branches[band](x)
+            features.append(out.view(out.size(0), -1))
+        x_cat = torch.cat(features, dim=1)
+        return self.fc(x_cat)
 
+    
 # === Setup ===
-train_ds = MemmapSleepDataset(PROCESSED_DATA_DIR, TRAIN_IDS)
-val_ds   = MemmapSleepDataset(PROCESSED_DATA_DIR, VAL_IDS)
-test_ds  = MemmapSleepDataset(PROCESSED_DATA_DIR, TEST_IDS)
+train_ds = MultiBandMemmapDataset(PROCESSED_DATA_DIR, TRAIN_IDS)
+val_ds   = MultiBandMemmapDataset(PROCESSED_DATA_DIR, VAL_IDS)
+test_ds  = MultiBandMemmapDataset(PROCESSED_DATA_DIR, TEST_IDS)
 
 train_loader = DataLoader(train_ds, batch_size=BATCH_SIZE, shuffle=True, num_workers=4, pin_memory=True)
 val_loader   = DataLoader(val_ds,   batch_size=BATCH_SIZE, shuffle=False, num_workers=4, pin_memory=True)
 test_loader  = DataLoader(test_ds,  batch_size=BATCH_SIZE, shuffle=False, num_workers=4, pin_memory=True)
 
 sample_x, _ = train_ds[0]
-model = SleepStageCNN64(input_channels=sample_x.shape[0], input_length=sample_x.shape[1], num_classes=NUM_CLASSES)
+model = MultiBandCNN64(input_channels=sample_x.shape[0], input_length=sample_x.shape[1], num_classes=NUM_CLASSES, bands=band_names)
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 model.to(device)
 
